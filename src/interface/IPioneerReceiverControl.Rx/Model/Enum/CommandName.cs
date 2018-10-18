@@ -11,7 +11,32 @@ namespace IPioneerReceiverControl.Rx.Model.Enum
         VolumeControl,
         VolumeSet,
         VolumeStatus,
+        MuteSwitch,
+        MuteStatus,
+        InputChange,
+        InputControl,
+        InputStatus,
+        ListeningModeSet,
+        ListeningModeStatus,
+        ToneSwitch,
+        ToneStatus,
+        BassControl,
+        BassSet,
+        BassStatus,
+        TrebleControl,
+        TrebleSet,
+        TrebleStatus,
 
-        ZonePowerSwitch,
+        Zone2PowerSwitch,
+        Zone2PowerStatus,
+        Zone2MultiSwitch,
+        Zone2InputSet,
+        Zone2InputStatus,
+        Zone2VolumeControl,
+        Zone2VolumeSet,
+        Zone2VolumeStatus,
+        Zone2MuteSwitch,
+        Zone2MuteStatus
+
     }
 }

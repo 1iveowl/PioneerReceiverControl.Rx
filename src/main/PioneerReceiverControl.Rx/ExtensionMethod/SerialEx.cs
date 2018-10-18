@@ -51,7 +51,8 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
                 serialPort.Open();
 
                 return disposableSerialPort;
-            });
+            })
+            .Publish().RefCount();
         }
     }
 }

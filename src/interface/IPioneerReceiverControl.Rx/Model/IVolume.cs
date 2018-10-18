@@ -4,10 +4,8 @@ using System.Text;
 
 namespace IPioneerReceiverControl.Rx.Model
 {
-    public interface IRange
+    public interface IVolume
     {
-        double Max { get; }
-        double Min { get; }
-        double StepInterval { get; }
+
     }
 }

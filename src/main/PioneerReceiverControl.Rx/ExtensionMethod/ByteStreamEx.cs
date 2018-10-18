@@ -12,9 +12,9 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
         private const byte CR = 0x0D; //Carriage Return
         private const byte LF = 0x0A; //Line Feed
     
-        public static IObservable<IRawReceiverData> ToResponseObservable(this IObservable<byte> observableByteStream, bool ignoreMissingLineFeed = true)
+        public static IObservable<IRawResponseData> ToResponseObservable(this IObservable<byte> observableByteStream, bool ignoreMissingLineFeed = true)
         {
-            return Observable.Create<IRawReceiverData>(obs =>
+            return Observable.Create<IRawResponseData>(obs =>
             {
                 var buffer = new List<byte>();
 
@@ -52,7 +52,7 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
                         void Update(bool hasErrors)
                         {
                             var str = Encoding.UTF8.GetString(buffer.ToArray());
-                            obs.OnNext(new RawReceiverData(str, hasErrors));
+                            obs.OnNext(new RawResponseData(str, hasErrors));
                             buffer.Clear();
                             crReceived = false;
                         }

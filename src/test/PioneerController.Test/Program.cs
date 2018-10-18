@@ -34,7 +34,7 @@ namespace PioneerController.Test
                 new ReceiverCommandDefinition
                 {
                     Function = "Zone 2 Power On/Off",
-                    Command = CommandName.ZonePowerSwitch,
+                    CommandName = CommandName.Zone2PowerSwitch,
                     CommandTemplate = "AP*",
                     CommandParameterType = typeof(OnOff),
                     ResponseTemplate = "APR*",
@@ -43,11 +43,20 @@ namespace PioneerController.Test
                 new ReceiverCommandDefinition
                 {
                     Function = "Volume Control",
-                    Command = CommandName.VolumeControl,
+                    CommandName = CommandName.VolumeControl,
                     CommandTemplate = "V*",
                     CommandParameterType = typeof(UpDown),
                     ResponseTemplate = "VOL***",
-                    ResponseParameterType = typeof(double)
+                    ResponseParameterType = typeof(IRangeValue)
+                },
+                new ReceiverCommandDefinition
+                {
+                    Function = "Volume Status",
+                    CommandName = CommandName.VolumeStatus,
+                    CommandTemplate = "?V",
+                    CommandParameterType = null,
+                    ResponseTemplate = "VOL***",
+                    ResponseParameterType = typeof(IRangeValue)
                 }
             };
 
@@ -69,13 +78,50 @@ namespace PioneerController.Test
 
             var receiverController = new ReceiverController(_commandDefinitions, rawDataResponseObservable, tcpClient);
 
-            var command = new ReceiverCommand
+            var disposableReceiverController = receiverController.ListenerObservable
+                .Subscribe(
+                    res =>
+                    {
+                        Console.WriteLine(res.Data);
+                    },
+                    ex =>
+                    {
+                        Console.WriteLine(ex);
+                    },
+                    () =>
+                    {
+                        Console.WriteLine("Completed.");
+                    });
+
+            var command1 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Down)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
             };
 
-            await receiverController.SendReceiverCommandAndForgetAsync(command);
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
+            var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
+            Console.WriteLine($"Value: {((IRangeValue)result1.ResponseValue).StringValue}, " +
+                              $"Timed Out: {result1.WaitingForResponseTimedOut}, " +
+                              $"Time: {result1.ResponseTime}");
+            
+            //await receiverController.SendReceiverCommandAndForgetAsync(command1);
+
+            var command2 = new ReceiverCommand
+            {
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+            };
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            var result2 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
+            Console.WriteLine($"Value: {((IRangeValue)result2.ResponseValue).StringValue}, " +
+                              $"Timed Out: {result2.WaitingForResponseTimedOut}, " +
+                              $"Time: {result2.ResponseTime}");
+
+            await Task.Delay(TimeSpan.FromSeconds(60));
+
+            disposableReceiverController?.Dispose();
         }
 
         private static async Task TcpStartRawAsync()
@@ -86,9 +132,9 @@ namespace PioneerController.Test
                 .ToByteStreamObservable(_ipAddress, _port)
                 .ToResponseObservable()
                 .Subscribe(
-                    m =>
+                    res =>
                     {
-                        Console.WriteLine(m.Data);
+                        Console.WriteLine(res.Data);
                     },
                     ex =>
                     {

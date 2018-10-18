@@ -9,7 +9,7 @@ namespace PioneerReceiverControl.Rx.Model
     public class ReceiverCommandDefinition : IReceiverCommandDefinition
     {
         public string Function { get; set; }
-        public CommandName Command { get; set; }
+        public CommandName CommandName { get; set; }
         public string CommandTemplate { get; set; }
         public string ResponseTemplate { get; set; }
         public Type CommandParameterType { get; set; }

@@ -6,7 +6,7 @@ namespace IPioneerReceiverControl.Rx.Model.Command
     public interface IReceiverCommandDefinition
     {
         string Function { get; }
-        CommandName Command { get; }
+        CommandName CommandName { get; }
         string CommandTemplate { get; }
         string ResponseTemplate { get; }
         Type CommandParameterType { get; }

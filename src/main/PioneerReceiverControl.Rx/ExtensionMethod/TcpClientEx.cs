@@ -64,7 +64,8 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
                         obs.OnCompleted);
 
                 return disposableTcpConnection;
-            });
+            })
+            .Publish().RefCount();
         }
 
         private static async Task<Stream> ConnectAndGetStreamAsync(TcpClient tcpClient, IPAddress ipAddress, int port)

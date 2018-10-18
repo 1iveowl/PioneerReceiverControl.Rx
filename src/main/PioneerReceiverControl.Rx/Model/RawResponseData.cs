@@ -5,15 +5,17 @@ using IPioneerReceiverControl.Rx.Model;
 
 namespace PioneerReceiverControl.Rx.Model
 {
-    public class RawReceiverData : IRawReceiverData
+    public class RawResponseData : IRawResponseData
     {
         public string Data { get; }
         public bool IsSuccessFul { get; }
+        public DateTime TimeStamp { get; }
 
-        public RawReceiverData(string data, bool isSuccessFul)
+        public RawResponseData(string data, bool isSuccessFul)
         {
             Data = data;
             IsSuccessFul = isSuccessFul;
+            TimeStamp = DateTime.Now;
         }
     }
 }
