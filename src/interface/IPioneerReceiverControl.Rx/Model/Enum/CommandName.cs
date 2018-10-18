@@ -13,7 +13,7 @@ namespace IPioneerReceiverControl.Rx.Model.Enum
         VolumeStatus,
         MuteSwitch,
         MuteStatus,
-        InputChange,
+        InputSet,
         InputControl,
         InputStatus,
         ListeningModeSet,

@@ -9,7 +9,7 @@ using IPioneerReceiverControl.Rx.Model.Enum;
 
 namespace IPioneerReceiverControl.Rx
 {
-    public interface IReceiverController
+    public interface IReceiverController : IDisposable
     {
         IEnumerable<CommandName> KnownCommands { get; }
 

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
 using IPioneerReceiverControl.Rx.CustomException;
@@ -30,64 +28,73 @@ namespace PioneerReceiverControl.Rx
 
         private readonly IEnumerable<IReceiverCommandDefinition> _commands;
 
-        private readonly IDisposable _disposableDataReceiver;
-        
         public IObservable<IRawResponseData> ListenerObservable { get; }
 
         public IEnumerable<CommandName> KnownCommands => _commands.Select(c => c.CommandName);
 
+        public ReceiverController(IEnumerable<IReceiverCommandDefinition> commands, TcpClient tcpClient, IPAddress ipAddress, int port)
+        {
+            ListenerObservable = tcpClient
+                .ToByteStreamObservable(ipAddress, port)
+                .ToResponseObservable();
+
+            _commands = commands;
+
+            _transportLayerType = TransportLayerType.Tcp;
+            _tcpClient = tcpClient;
+        }
+
+        public ReceiverController(IEnumerable<IReceiverCommandDefinition> commands, SerialPort serialPort, int bufferSize)
+        {
+            ListenerObservable = serialPort
+                .ToByteStreamObservable(bufferSize)
+                .ToResponseObservable();
+
+            _commands = commands;
+
+            _transportLayerType = TransportLayerType.SerialPort;
+            _serialPort = serialPort;
+        }
+
         public ReceiverController(
-            IEnumerable<IReceiverCommandDefinition> commands, 
-            IObservable<IRawResponseData> dataObservable, 
-            TcpClient tcpClient) : this(commands, dataObservable)
+            IEnumerable<IReceiverCommandDefinition> commands,
+            IObservable<IRawResponseData> rawDataObservable,
+            TcpClient tcpClient) : this(commands, rawDataObservable)
         {
             _transportLayerType = TransportLayerType.Tcp;
             _tcpClient = tcpClient;
         }
 
         public ReceiverController(
-            IEnumerable<IReceiverCommandDefinition> commands, 
-            IObservable<IRawResponseData> dataObservable, 
-            SerialPort serialPort) : this(commands, dataObservable)
+            IEnumerable<IReceiverCommandDefinition> commands,
+            IObservable<IRawResponseData> rawDataObservable,
+            SerialPort serialPort) : this(commands, rawDataObservable)
         {
             _transportLayerType = TransportLayerType.SerialPort;
             _serialPort = serialPort;
         }
 
-        private ReceiverController(IEnumerable<IReceiverCommandDefinition> commands,
-            IObservable<IRawResponseData> dataObservable)
-        {
-            ListenerObservable = dataObservable;
-            _commands = commands;
-
-            _disposableDataReceiver = ListenerObservable
-                .Subscribe(res =>
-                    {
-
-                    },
-                    ex =>
-                    {
-
-                    },
-                    () =>
-                    {
-
-                    });
-        }
         
 
-        public async Task<IReceiverResponse> SendReceiverCommandAndTryWaitForResponseAsync(IReceiverCommand command, TimeSpan timeout)
+        private ReceiverController(IEnumerable<IReceiverCommandDefinition> commands,
+            IObservable<IRawResponseData> rawDataObservable)
+        {
+            ListenerObservable = rawDataObservable;
+            _commands = commands;
+        }
+
+
+        public async Task<IReceiverResponse> SendReceiverCommandAndTryWaitForResponseAsync(IReceiverCommand command,
+            TimeSpan timeout)
         {
             var commandDefinition = _commands.FirstOrDefault(c => c.CommandName == command.KeyValue.Key);
 
             var receiverResponse = new ReceiverResponse();
             
-            await Observable.Create<int>(obs =>
+            await Observable.Create<int>(async obs =>
             {
-                var disposable = SendAsync(CreateRawCommand(command)).ToObservable()
-                //var disposable = Observable.FromAsync(ct => SendAsync(CreateRawCommand(command)))
-                    //.Select(_ => null as IRawResponseData)
-                    .SelectMany(ListenerObservable.Timeout(timeout))
+                var disposable = ListenerObservable
+                    .Timeout(timeout)
                     .Where(r => !(r?.Data is null))
                     .Subscribe(
                         rawResponse =>
@@ -121,14 +128,17 @@ namespace PioneerReceiverControl.Rx
                             obs.OnNext(0);
                             obs.OnCompleted();
                         });
-                
+
+                await SendAsync(CreateRawCommand(command));
+
                 return disposable;
             });
+                
 
             return receiverResponse;
         }
 
-        
+
         public async Task SendReceiverCommandAndForgetAsync(IReceiverCommand command)
         {
             var rawCommand = CreateRawCommand(command);
@@ -136,7 +146,8 @@ namespace PioneerReceiverControl.Rx
             await SendAsync(rawCommand);
         }
 
-        private ReceiverResponse CreateResponse(IReceiverCommandDefinition commandDefinition, IRawResponseData data, string parameter)
+        private ReceiverResponse CreateResponse(IReceiverCommandDefinition commandDefinition, IRawResponseData data,
+            string parameter)
         {
             var response = new ReceiverResponse
             {
@@ -146,31 +157,58 @@ namespace PioneerReceiverControl.Rx
 
             if (commandDefinition.ResponseParameterType == typeof(OnOff))
             {
-                response.ResponseValue = parameter == "O";
+                response.ResponseValue = parameter == "0";
             }
+
             if (commandDefinition.ResponseParameterType == typeof(IRangeValue))
             {
                 response.ResponseValue = ResponseConverter.Convert(commandDefinition.CommandName, parameter);
             }
 
-            return response;
+            if (commandDefinition.ResponseParameterType == typeof(InputType))
+            {
+                if (int.TryParse(parameter, out var inputTypeNumber))
+                {
+                    response.ResponseValue = (InputType) inputTypeNumber;
+                }
+                else
+                {
+                    response.ResponseValue = InputType.Unknown;
+                }
+            }
 
+            if (commandDefinition.ResponseParameterType == typeof(ListeningMode))
+            {
+                if (int.TryParse(parameter, out var listeningModeNumber))
+                {
+                    response.ResponseValue = (ListeningMode)listeningModeNumber;
+                }
+                else
+                {
+                    response.ResponseValue = ListeningMode.Unknown;
+                }
+            }
+
+            return response;
         }
 
         private string MatchResponse(IReceiverCommandDefinition commandDefinition, IRawResponseData response)
         {
             var responseWithOutWildcard = SplitNameFromParameter(commandDefinition.ResponseTemplate, response.Data);
 
-            return responseWithOutWildcard.response == responseWithOutWildcard.template ? responseWithOutWildcard.parameter : null;
+            return responseWithOutWildcard.response == responseWithOutWildcard.template
+                ? responseWithOutWildcard.parameter
+                : null;
         }
 
-        private (string template, string response, string parameter) SplitNameFromParameter(string template, string response)
+        private (string template, string response, string parameter) SplitNameFromParameter(string template,
+            string response)
         {
             if (response.Length != template.Length)
             {
                 return (null, null, null);
             }
-            
+
             var templateWithoutWildcards = template.Replace(Wildcard, string.Empty);
 
             var lenTemplateWithoutWildcards = templateWithoutWildcards.Length;
@@ -181,7 +219,7 @@ namespace PioneerReceiverControl.Rx
 
             return (templateWithoutWildcards, responseName, parameter);
         }
-        
+
         private string CreateRawCommand(IReceiverCommand command)
         {
             var commandDefinition = _commands.FirstOrDefault(d => d.CommandName == command?.KeyValue.Key);
@@ -191,11 +229,11 @@ namespace PioneerReceiverControl.Rx
                 throw new PioneerReceiverException($"Template is undefined for: {command.KeyValue.Key}");
             }
 
-            if ( command.KeyValue.Value is null)
+            if (command.KeyValue.Value is null)
             {
                 return commandDefinition.CommandTemplate;
             }
-            
+
             if (commandDefinition is null)
             {
                 throw new PioneerReceiverException($"Unknown command: {command.KeyValue.Key}");
@@ -219,6 +257,16 @@ namespace PioneerReceiverControl.Rx
                 parameter = button == OnOff.On ? "O" : "F";
             }
 
+            if (command.KeyValue.Value is InputType inputType)
+            {
+                parameter = ((int)inputType).ToString("00");
+            }
+
+            if (command.KeyValue.Value is ListeningMode listeningMode)
+            {
+                parameter = ((int)listeningMode).ToString("0000");
+            }
+
             return commandDefinition.CommandTemplate.WildcardReplace('*', parameter);
         }
 
@@ -235,6 +283,12 @@ namespace PioneerReceiverControl.Rx
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public void Dispose()
+        {
+            _tcpClient?.Dispose();
+            _serialPort?.Dispose();
         }
     }
 }
