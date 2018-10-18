@@ -41,7 +41,8 @@ namespace PioneerReceiverControl.Rx
                         _isListening = true;
                         _isConnectionClosed = false;
 
-                        return _listenerObservable.Subscribe(
+                        return _listenerObservable
+                            .Subscribe(
                             rawResponse =>
                             {
                                 
@@ -50,6 +51,14 @@ namespace PioneerReceiverControl.Rx
 
                                 if (commandDefinition is null)
                                 {
+                                    obs.OnNext(new ReceiverResponse
+                                    {
+                                        ResponseValue = $"Unknown: {rawResponse.Data}",
+                                        ResponseTime = DateTime.Now,
+                                        ResponseToCommand = "Unknown",
+                                        WaitingForResponseTimedOut = false,
+                                    });
+
                                     return;
                                 }
 
@@ -78,7 +87,8 @@ namespace PioneerReceiverControl.Rx
         {
             _listenerObservable = tcpClient
                 .ToByteStreamObservable(ipAddress, port)
-                .ToResponseObservable();
+                .ToResponseObservable()
+                .Where(r => r.Data != "R");
 
             _commands = commands;
 
@@ -93,7 +103,8 @@ namespace PioneerReceiverControl.Rx
         {
             _listenerObservable = serialPort
                 .ToByteStreamObservable(bufferSize)
-                .ToResponseObservable();
+                .ToResponseObservable()
+                .Where(r => r.Data != "R");
 
             _commands = commands;
 
@@ -124,7 +135,7 @@ namespace PioneerReceiverControl.Rx
         private ReceiverController(IEnumerable<IReceiverCommandDefinition> commands,
             IObservable<IRawResponseData> rawDataObservable)
         {
-            _listenerObservable = rawDataObservable;
+            _listenerObservable = rawDataObservable.Where(r => r.Data != "R");
             _commands = commands;
         }
 
