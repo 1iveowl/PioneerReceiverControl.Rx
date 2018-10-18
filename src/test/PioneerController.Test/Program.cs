@@ -12,6 +12,7 @@ using PioneerReceiverControl.Rx;
 using PioneerReceiverControl.Rx.Data;
 using PioneerReceiverControl.Rx.ExtensionMethod;
 using PioneerReceiverControl.Rx.Model;
+using static PioneerReceiverControl.Rx.ExtensionMethod.PioneerStringEx;
 
 namespace PioneerController.Test
 {
@@ -31,7 +32,7 @@ namespace PioneerController.Test
 
             _commandDefinitions = new DefaultReceiverCommandDefinition().GetDefaultDefinitions;
 
-            await TcpSentCommandAndDisconnectAsync();
+            await TcpStartListenerAsync();
             Console.ReadLine();
             _disposableResponse?.Dispose();
 
@@ -39,7 +40,7 @@ namespace PioneerController.Test
             Console.ReadLine();
         }
 
-        private static async Task TcpSentCommandAndDisconnectAsync()
+        private static async Task TcpSendOneCommandAndDisconnectAsync()
         {
             using (var tcpClient = new TcpClient())
             using (var receiverController = new ReceiverController(_commandDefinitions, tcpClient, _ipAddress, _port))
@@ -53,9 +54,17 @@ namespace PioneerController.Test
 
                 var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
 
-                Console.WriteLine($"Value: {((InputType)result1.ResponseValue)}, " +
-                                  $"Timed Out: {result1.WaitingForResponseTimedOut}, " +
-                                  $"Time: {result1.ResponseTime}");
+                Console.WriteLine(UpdateString(result1));
+
+                await Task.Delay(TimeSpan.FromSeconds(2));
+
+                var command2 = new ReceiverCommand
+                {
+                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+                };
+
+                var result2 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
+                Console.WriteLine(UpdateString(result2));
             }
         }
 
@@ -69,7 +78,7 @@ namespace PioneerController.Test
                     .Subscribe(
                         res =>
                         {
-                            Console.WriteLine(res.Data);
+                            Console.WriteLine(UpdateString(res));
                         },
                         ex =>
                         {
@@ -88,9 +97,7 @@ namespace PioneerController.Test
                 await Task.Delay(TimeSpan.FromSeconds(5));
 
                 var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
-                Console.WriteLine($"Value: {((IRangeValue)result1?.ResponseValue)?.StringValue}, " +
-                                  $"Timed Out: {result1?.WaitingForResponseTimedOut}, " +
-                                  $"Time: {result1?.ResponseTime}");
+                Console.WriteLine(UpdateString(result1));
 
                 var command2 = new ReceiverCommand
                 {
@@ -100,9 +107,7 @@ namespace PioneerController.Test
                 await Task.Delay(TimeSpan.FromSeconds(2));
 
                 var result2 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
-                Console.WriteLine($"Value: {((IRangeValue)result2.ResponseValue).StringValue}, " +
-                                  $"Timed Out: {result2.WaitingForResponseTimedOut}, " +
-                                  $"Time: {result2.ResponseTime}");
+                Console.WriteLine(UpdateString(result2));
 
                 await Task.Delay(TimeSpan.FromSeconds(60));
 
@@ -141,6 +146,14 @@ namespace PioneerController.Test
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             await Task.CompletedTask;
+        }
+
+        private static string UpdateString(IReceiverResponse response)
+        {
+            return $"Command: {response.ResponseToCommand}, " +
+                $"Value: {response.GetValueString()}, " +
+                $"Timed Out: {response.WaitingForResponseTimedOut}, " +
+                $"Time: {response.ResponseTime}";
         }
 
         private static async Task SerialStartAsync()

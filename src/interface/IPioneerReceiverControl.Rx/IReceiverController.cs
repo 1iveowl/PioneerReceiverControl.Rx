@@ -17,7 +17,7 @@ namespace IPioneerReceiverControl.Rx
 
         Task SendReceiverCommandAndForgetAsync(IReceiverCommand command);
 
-        IObservable<IRawResponseData> ListenerObservable { get; }
+        IObservable<IReceiverResponse> ListenerObservable { get; }
 
     }
 }

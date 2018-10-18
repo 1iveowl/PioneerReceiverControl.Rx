@@ -18,6 +18,7 @@ namespace PioneerReceiverControl.Rx.Converter
             {
                 ResponseTime = data.TimeStamp,
                 WaitingForResponseTimedOut = false,
+                ResponseToCommand = commandDefinition.CommandName.ToString()
             };
 
             if (commandDefinition.ResponseParameterType == typeof(OnOff))

@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using IPioneerReceiverControl.Rx.CustomException;
+using IPioneerReceiverControl.Rx.Model;
 
 namespace PioneerReceiverControl.Rx.ExtensionMethod
 {
-    public static class StringEx
+    public static class PioneerStringEx
     {
+
         public static string WildcardReplace(this string source, char wildcard, string replacement)
         {
             var sourceWildcardCount = source.Count(c => c == wildcard);
