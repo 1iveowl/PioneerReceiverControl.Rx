@@ -8,7 +8,7 @@ using PioneerReceiverControl.Rx.Model;
 
 namespace PioneerReceiverControl.Rx.Converter
 {
-    internal static class ResponseConverter
+    internal static class ResponseConverterHelper
     {
         internal static IRangeValue Convert(CommandName commandName, string parameter)
         {
@@ -67,7 +67,5 @@ namespace PioneerReceiverControl.Rx.Converter
             }
 
         }
-
-
     }
 }

@@ -10,6 +10,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{21A33CDA-5B22-493D-88C2-F7D5AE962928}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{89A4E873-7636-4FBF-902D-4DE7DBF3FBB1}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\LICENSE.md = ..\..\LICENSE.md
+		..\..\README.md = ..\..\README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Interface", "Interface", "{4CD58BC2-A1A3-4064-8FFD-6819BA08BE3F}"
 EndProject
@@ -17,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IPioneerReceiverControl.Rx"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{9A83C097-38D4-4564-972C-6E5571BDA2E2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PioneerController.Test", "..\test\PioneerController.Test\PioneerController.Test.csproj", "{A2A85F4E-87D0-48DB-B5F2-5D094E387BD2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PioneerController.Test", "..\test\PioneerController.Test\PioneerController.Test.csproj", "{A2A85F4E-87D0-48DB-B5F2-5D094E387BD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
