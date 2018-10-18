@@ -4,12 +4,9 @@ using System.Text;
 
 namespace IPioneerReceiverControl.Rx.Model.Command
 {
-    public interface IReceiverResponse
+    public interface IReceiverResponse : IReceiverCommandDefinition
     {
-        string Name { get; }
-        string Description { get; }
-        string Value { get; }
-        string Parameter { get; }
-        string ResponseTemplate { get; }
+        object ResponseValue { get; }
+        DateTime ResponseTime { get; }
     }
 }

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Reactive.Linq;
 using System.Text;
+using IPioneerReceiverControl.Rx.Model;
+using PioneerReceiverControl.Rx.Model;
 
 namespace PioneerReceiverControl.Rx.ExtensionMethod
 {
@@ -10,9 +12,9 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
         private const byte CR = 0x0D; //Carriage Return
         private const byte LF = 0x0A; //Line Feed
     
-        public static IObservable<string> ToResponseObservable(this IObservable<byte> observableByteStream, bool ignoreMissingLineFeed = true)
+        public static IObservable<IRawReceiverData> ToResponseObservable(this IObservable<byte> observableByteStream, bool ignoreMissingLineFeed = true)
         {
-            return Observable.Create<string>(obs =>
+            return Observable.Create<IRawReceiverData>(obs =>
             {
                 var buffer = new List<byte>();
 
@@ -31,25 +33,26 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
                                 crReceived = true;
                                 break;
                             case CR when crReceived:
-                                //ignore addition CR after first CR is received
+                                //ignore additional CR's after first CR is received
                                 break;
                             case LF when crReceived:
-                                Update();
+                                Update(false);
                                 break;
                             default:
                             {
                                 if (b != LF && crReceived && ignoreMissingLineFeed)
                                 {
-                                    Update();
+                                    Update(true);
                                 }
 
                                 break;
                             }
                         }
 
-                        void Update()
+                        void Update(bool hasErrors)
                         {
-                            obs.OnNext(Encoding.UTF8.GetString(buffer.ToArray()));
+                            var str = Encoding.UTF8.GetString(buffer.ToArray());
+                            obs.OnNext(new RawReceiverData(str, hasErrors));
                             buffer.Clear();
                             crReceived = false;
                         }

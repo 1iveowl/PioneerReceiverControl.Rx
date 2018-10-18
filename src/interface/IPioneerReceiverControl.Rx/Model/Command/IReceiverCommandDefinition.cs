@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using IPioneerReceiverControl.Rx.Model.Enum;
 
 namespace IPioneerReceiverControl.Rx.Model.Command
 {
     public interface IReceiverCommandDefinition
     {
         string Function { get; }
-        string Name { get; }
+        CommandName Command { get; }
         string CommandTemplate { get; }
         string ResponseTemplate { get; }
         Type CommandParameterType { get; }

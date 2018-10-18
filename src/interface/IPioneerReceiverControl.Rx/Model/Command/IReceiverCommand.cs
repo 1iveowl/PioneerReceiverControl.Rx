@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using IPioneerReceiverControl.Rx.Model.Enum;
 
 namespace IPioneerReceiverControl.Rx.Model.Command
 {
     public interface IReceiverCommand
     {
-        string Function { get; }
-        string Name { get; }
-        string CommandTemplate { get; }
-        string CommandParameter { get; }
+        KeyValuePair<CommandName, object> KeyValue { get; }
 
-        string ResponseTemplate { get; }
+        DateTime CommandTime { get; }
     }
 }

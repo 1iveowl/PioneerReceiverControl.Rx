@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
+using PioneerReceiverControl.Rx;
 using PioneerReceiverControl.Rx.ExtensionMethod;
 using PioneerReceiverControl.Rx.Model;
 
@@ -17,29 +18,38 @@ namespace PioneerController.Test
     {
         private static IDisposable _disposableResponse;
 
-        private static IReceiver _receiver;
+        private static IEnumerable<IReceiverCommandDefinition> _commandDefinitions;
+
+        private static IPAddress _ipAddress;
+        private static int _port;
 
         private static async Task Main(string[] args)
         {
+            _ipAddress = IPAddress.Parse("192.168.0.24");
+            _port = 23;
 
-            _receiver = new Receiver
+
+            _commandDefinitions = new List<IReceiverCommandDefinition>
             {
-                Commands = new List<IReceiverCommandDefinition>
+                new ReceiverCommandDefinition
                 {
-                    new ReceiverCommandDefinition
-                    {
-                        Function = "Zone 2 Power On/Off",
-                        Name = "zone2PowerSwitch",
-                        CommandTemplate = "AP*",
-                        CommandParameterType = typeof(OnOff),
-                        ResponseTemplate = "APR*",
-                        ResponseParameterType = typeof(OnOff),
-                    },
+                    Function = "Zone 2 Power On/Off",
+                    Command = CommandName.ZonePowerSwitch,
+                    CommandTemplate = "AP*",
+                    CommandParameterType = typeof(OnOff),
+                    ResponseTemplate = "APR*",
+                    ResponseParameterType = typeof(OnOff),
                 },
+                new ReceiverCommandDefinition
+                {
+                    Function = "Volume Control",
+                    Command = CommandName.VolumeControl,
+                    CommandTemplate = "V*",
+                    CommandParameterType = typeof(UpDown),
+                    ResponseTemplate = "VOL***",
+                    ResponseParameterType = typeof(double)
+                }
             };
-
-
-
 
             await TcpStartAsync();
             Console.ReadLine();
@@ -53,15 +63,32 @@ namespace PioneerController.Test
         {
             var tcpClient = new TcpClient();
 
-            var ipaddress = IPAddress.Parse("192.168.0.24");
+            var rawDataResponseObservable = tcpClient
+                .ToByteStreamObservable(_ipAddress, _port)
+                .ToResponseObservable();
+
+            var receiverController = new ReceiverController(_commandDefinitions, rawDataResponseObservable, tcpClient);
+
+            var command = new ReceiverCommand
+            {
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Down)
+            };
+
+            await receiverController.SendReceiverCommandAndForgetAsync(command);
+
+        }
+
+        private static async Task TcpStartRawAsync()
+        {
+            var tcpClient = new TcpClient();
 
             _disposableResponse = tcpClient
-                .ToByteStreamObservable(ipaddress, 23)
+                .ToByteStreamObservable(_ipAddress, _port)
                 .ToResponseObservable()
                 .Subscribe(
                     m =>
                     {
-                        Console.WriteLine(m);
+                        Console.WriteLine(m.Data);
                     },
                     ex =>
                     {
