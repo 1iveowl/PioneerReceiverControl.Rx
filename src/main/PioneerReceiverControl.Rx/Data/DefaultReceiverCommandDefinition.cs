@@ -87,6 +87,15 @@ namespace PioneerReceiverControl.Rx.Data
                 },
                 new ReceiverCommandDefinition
                 {
+                    Function = "Input Status",
+                    CommandName = CommandName.InputSet,
+                    CommandTemplate = "?F",
+                    CommandParameterType = null,
+                    ResponseTemplate = "FN**",
+                    ResponseParameterType = typeof(InputType)
+                },
+                new ReceiverCommandDefinition
+                {
                     Function = "Zone 2 Power On/Off",
                     CommandName = CommandName.Zone2PowerSwitch,
                     CommandTemplate = "AP*",
@@ -118,6 +127,15 @@ namespace PioneerReceiverControl.Rx.Data
                     CommandName = CommandName.Zone2InputSet,
                     CommandTemplate = "**ZS",
                     CommandParameterType = typeof(InputType),
+                    ResponseTemplate = "Z2F**",
+                    ResponseParameterType = typeof(InputType)
+                },
+                new ReceiverCommandDefinition
+                {
+                    Function = "Zone 2 Input Status",
+                    CommandName = CommandName.Zone2InputStatus,
+                    CommandTemplate = "?ZS",
+                    CommandParameterType = null,
                     ResponseTemplate = "Z2F**",
                     ResponseParameterType = typeof(InputType)
                 },

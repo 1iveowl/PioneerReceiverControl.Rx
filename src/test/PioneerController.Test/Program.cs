@@ -31,7 +31,7 @@ namespace PioneerController.Test
 
             _commandDefinitions = new DefaultReceiverCommandDefinition().GetDefaultDefinitions;
 
-            await TcpStartListenerAsync();
+            await TcpSentCommandAndDisconnectAsync();
             Console.ReadLine();
             _disposableResponse?.Dispose();
 
@@ -48,12 +48,12 @@ namespace PioneerController.Test
 
                 var command1 = new ReceiverCommand
                 {
-                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
+                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.Zone2InputStatus, null)
                 };
 
                 var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
 
-                Console.WriteLine($"Value: {((IRangeValue)result1.ResponseValue).StringValue}, " +
+                Console.WriteLine($"Value: {((InputType)result1.ResponseValue)}, " +
                                   $"Timed Out: {result1.WaitingForResponseTimedOut}, " +
                                   $"Time: {result1.ResponseTime}");
             }
