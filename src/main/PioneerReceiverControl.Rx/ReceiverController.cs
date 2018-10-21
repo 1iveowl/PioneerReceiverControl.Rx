@@ -5,6 +5,7 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
@@ -42,6 +43,7 @@ namespace PioneerReceiverControl.Rx
                         _isConnectionClosed = false;
 
                         return _listenerObservable
+                            .ObserveOn(Scheduler.Default)
                             .Subscribe(
                             rawResponse =>
                             {
@@ -72,7 +74,10 @@ namespace PioneerReceiverControl.Rx
                             obs.OnError,
                             obs.OnCompleted);
                     })
-                    .Finally(() => _isListening = false)
+                    .Finally(() =>
+                    {
+                        _isListening = false;
+                    })
                     .Publish().RefCount();
             }
         }
