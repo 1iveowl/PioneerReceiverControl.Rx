@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
@@ -15,12 +17,19 @@ namespace PioneerController.Test
 {
     public class Program
     {
+        // Needed for alternative to Console.ReadLine();
+        private static readonly AutoResetEvent WaitHandle = new AutoResetEvent(false);
+
         private static IDisposable _disposableResponse;
+        private static IDisposable _disposableReceiverController;
+        private static ReceiverController _receiverController;
 
         private static IEnumerable<IReceiverCommandDefinition> _commandDefinitions;
 
+        private static TcpClient _tcpClient;
         private static IPAddress _ipAddress;
         private static int _port;
+  
 
         private static async Task Main(string[] args)
         {
@@ -29,18 +38,56 @@ namespace PioneerController.Test
 
             _commandDefinitions = new DefaultReceiverCommandDefinition().GetDefaultDefinitions;
 
-            await TcpStartListenerAsync();
-            Console.ReadLine();
-            _disposableResponse?.Dispose();
+            // Run this when the user presses the ctrl-C key - alternative to Console.ReadLine();
+            Console.CancelKeyPress += (o, e) =>
+            {
+                // Clean up...
+                _disposableResponse?.Dispose();
+                _receiverController?.Dispose();
+                _tcpClient?.Dispose();
+                Console.WriteLine("Exit");
+                WaitHandle.Set();
+            };
 
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadLine();
+            // Start the TCP Listener.
+            StartTcpListener();
+
+            // Wait for connection
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // Let's send some commands
+
+            // Create a command:
+            var command1 = new ReceiverCommand
+            {
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
+            };
+
+            // Let's send the command and forget about it.
+            await _receiverController.SendReceiverCommandAndForgetAsync(command1);
+
+            await Task.Delay(TimeSpan.FromSeconds(3));
+
+            // Create another command:
+            var command2 = new ReceiverCommand
+            {
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+            };
+
+            // Send a command and listen for the receiver to respond. 
+            var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
+            Console.WriteLine(FormateNiceStringFromResponse(result2));
+
+
+            // Wait here until the user presses the ctrl-C key - alternative to Console.ReadLine();
+            WaitHandle.WaitOne();
+
         }
 
         private static async Task TcpSendOneCommandAndDisconnectAsync()
         {
             using (var tcpClient = new TcpClient())
-            using (var receiverController = new ReceiverController(_commandDefinitions, tcpClient, _ipAddress, _port))
+            using (var receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port))
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));
 
@@ -49,67 +96,33 @@ namespace PioneerController.Test
                     KeyValue = new KeyValuePair<CommandName, object>(CommandName.Zone2InputStatus, null)
                 };
 
-                var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
+                var result1 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
 
-                Console.WriteLine(UpdateString(result1));
-
-                await Task.Delay(TimeSpan.FromSeconds(2));
-
-                var command2 = new ReceiverCommand
-                {
-                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
-                };
-
-                var result2 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
-                Console.WriteLine(UpdateString(result2));
+                Console.WriteLine(FormateNiceStringFromResponse(result1));
             }
         }
 
-        private static async Task TcpStartListenerAsync()
+        private static void StartTcpListener()
         {
-            using (var tcpClient = new TcpClient())
-            using (var receiverController = new ReceiverController(_commandDefinitions, tcpClient, _ipAddress, _port))
-            {
-               
-                var disposableReceiverController = receiverController.ListenerObservable
-                    .Subscribe(
-                        res =>
-                        {
-                            Console.WriteLine(UpdateString(res));
-                        },
-                        ex =>
-                        {
-                            Console.WriteLine(ex);
-                        },
-                        () =>
-                        {
-                            Console.WriteLine("Completed.");
-                        });
+            var tcpClient = new TcpClient();
 
-                var command1 = new ReceiverCommand
-                {
-                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
-                };
+            _receiverController = new ReceiverController(_commandDefinitions, tcpClient, _ipAddress, _port);
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+            _disposableReceiverController = _receiverController.ListenerObservable
+                .Subscribe(
+                    res =>
+                    {
+                        Console.WriteLine(FormateNiceStringFromResponse(res));
+                    },
+                    ex =>
+                    {
+                        Console.WriteLine(ex);
+                    },
+                    () =>
+                    {
+                        Console.WriteLine("Completed.");
+                    });
 
-                var result1 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(2));
-                Console.WriteLine(UpdateString(result1));
-
-                var command2 = new ReceiverCommand
-                {
-                    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
-                };
-
-                await Task.Delay(TimeSpan.FromSeconds(2));
-
-                var result2 = await receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
-                Console.WriteLine(UpdateString(result2));
-
-                await Task.Delay(TimeSpan.FromSeconds(60));
-
-                disposableReceiverController?.Dispose();
-            }
         }
 
         private static async Task TcpStartRawAsync()
@@ -145,12 +158,12 @@ namespace PioneerController.Test
             await Task.CompletedTask;
         }
 
-        private static string UpdateString(IReceiverResponse response)
+        private static string FormateNiceStringFromResponse(IReceiverResponse response)
         {
             return $"Command: {response.ResponseToCommand}, " +
-                $"Value: {response.GetValueString()}, " +
-                $"Timed Out: {response.WaitingForResponseTimedOut}, " +
-                $"Time: {response.ResponseTime}";
+                    $"Value: {response.GetValueString()}, " +
+                    $"Timed Out: {response.WaitingForResponseTimedOut}, " +
+                    $"Time: {response.ResponseTime}";
         }
 
         private static async Task SerialStartAsync()
