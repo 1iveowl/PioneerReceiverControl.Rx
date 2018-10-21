@@ -181,7 +181,8 @@ namespace PioneerController.Test
             return $"Command: {response.ResponseToCommand}, " +
                     $"Value: {response.GetValueString()}, " +
                     $"Timed Out: {response.WaitingForResponseTimedOut}, " +
-                    $"Time: {response.ResponseTime}";
+                    $"Time: {response.ResponseTime} \r\n" +
+                    $"JSON: {response.GetValueJson()} \r\n";
         }
 
         private static async Task SerialStartAsync()

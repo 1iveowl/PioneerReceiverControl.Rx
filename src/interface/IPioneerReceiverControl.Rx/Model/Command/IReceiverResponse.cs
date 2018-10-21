@@ -13,5 +13,7 @@ namespace IPioneerReceiverControl.Rx.Model.Command
 
         string GetValueString();
 
+        string GetValueJson();
+
     }
 }
