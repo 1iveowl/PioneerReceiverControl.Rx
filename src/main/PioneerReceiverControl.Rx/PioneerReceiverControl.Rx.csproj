@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="4.5.0" />
+    <PackageReference Include="System.Reactive" Version="4.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\interface\IPioneerReceiverControl.Rx\IPioneerReceiverControl.Rx.csproj" />
+  </ItemGroup>
+
+</Project>

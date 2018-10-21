@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\interface\IPioneerReceiverControl.Rx\IPioneerReceiverControl.Rx.csproj" />
+    <ProjectReference Include="..\..\main\PioneerReceiverControl.Rx\PioneerReceiverControl.Rx.csproj" />
+  </ItemGroup>
+
+</Project>
