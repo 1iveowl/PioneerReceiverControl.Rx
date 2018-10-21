@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx.Model.Command;
@@ -53,34 +55,49 @@ namespace PioneerController.Test
             StartTcpListener();
 
             // Wait for connection
+            //await Task.Delay(TimeSpan.FromSeconds(5));
+
+            //// Let's send some commands
+
+            //// Create a command:
+            //var command1 = new ReceiverCommand
+            //{
+            //    KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerSwitch, OnOff.On)
+            //};
+
+            //// Let's send the command and forget about it.
+            //await _receiverController.SendReceiverCommandAndForgetAsync(command1);
+
+            //await Task.Delay(TimeSpan.FromSeconds(3));
+
+            //// Create another command:
+            //var command2 = new ReceiverCommand
+            //{
+            //    KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+            //};
+
+            //// Send a command and listen for the receiver to respond. 
+            //var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
+            //Console.WriteLine(FormateNiceStringFromResponse(result2));
+
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            // Let's send some commands
-
-            // Create a command:
-            var command1 = new ReceiverCommand
+            // Create another command:
+            var command3 = new ReceiverCommand
             {
                 KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
             };
 
-            // Let's send the command and forget about it.
-            await _receiverController.SendReceiverCommandAndForgetAsync(command1);
-
-            await Task.Delay(TimeSpan.FromSeconds(3));
-
-            // Create another command:
-            var command2 = new ReceiverCommand
-            {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
-            };
-
             // Send a command and listen for the receiver to respond. 
-            var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
-            Console.WriteLine(FormateNiceStringFromResponse(result2));
+            var result3 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command3, TimeSpan.FromSeconds(2));
+            Console.WriteLine(FormateNiceStringFromResponse(result3));
 
 
             // Wait here until the user presses the ctrl-C key - alternative to Console.ReadLine();
             WaitHandle.WaitOne();
+
+            Console.WriteLine("...End...");
+            Console.ReadLine();
 
         }
 
@@ -104,11 +121,12 @@ namespace PioneerController.Test
 
         private static void StartTcpListener()
         {
-            var tcpClient = new TcpClient();
+            _tcpClient = new TcpClient();
 
-            _receiverController = new ReceiverController(_commandDefinitions, tcpClient, _ipAddress, _port);
+            _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
 
             _disposableReceiverController = _receiverController.ListenerObservable
+                .ObserveOn(Scheduler.Default)
                 .Subscribe(
                     res =>
                     {
