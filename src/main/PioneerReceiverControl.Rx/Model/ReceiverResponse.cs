@@ -10,6 +10,7 @@ namespace PioneerReceiverControl.Rx.Model
         public object ResponseValue { get; internal set; }
         public DateTime ResponseTime { get; internal set; }
         public bool WaitingForResponseTimedOut { get; internal set; }
+
         public string GetValueString()
         {
             if (ResponseValue is IRangeValue rv)
@@ -21,5 +22,24 @@ namespace PioneerReceiverControl.Rx.Model
                 return ResponseValue?.ToString();
             }
         }
+
+        public string GetValueJson()
+        {
+            string parameterValue;
+
+            if (ResponseValue is IRangeValue rv)
+            {
+                parameterValue = rv.StringJsonValue;
+            }
+            else
+            {
+                parameterValue= ResponseValue?.ToString();
+            }
+
+            return $"{{ \"Command\": \"{ResponseToCommand}\", " +
+                   $"\"Parameter\": \"{parameterValue}\" }} ";
+        }
+
+     
     }
 }

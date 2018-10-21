@@ -12,5 +12,6 @@ namespace PioneerReceiverControl.Rx.Model
         public int StepInterval { get; internal set; }
         public double? NummericValue { get; internal set; }
         public string StringValue { get; internal set; }
+        public string StringJsonValue => NummericValue.ToString();
     }
 }

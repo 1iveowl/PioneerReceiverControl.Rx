@@ -11,6 +11,7 @@ namespace IPioneerReceiverControl.Rx.Model
         int StepInterval { get; }
         double? NummericValue { get; }
         string StringValue { get; }
+        string StringJsonValue { get; }
 
     }
 }
