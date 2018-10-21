@@ -160,6 +160,7 @@ namespace PioneerReceiverControl.Rx
             await Observable.Create<int>(async obs =>
             {
                 var disposable = _listenerObservable
+                    .ObserveOn(Scheduler.Default)
                     .Timeout(timeout)
                     .Where(r => !(r?.Data is null))
                     .Subscribe(
