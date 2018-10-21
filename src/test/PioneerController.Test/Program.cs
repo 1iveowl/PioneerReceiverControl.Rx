@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO.Ports;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
 using PioneerReceiverControl.Rx;
 using PioneerReceiverControl.Rx.Data;
 using PioneerReceiverControl.Rx.ExtensionMethod;
 using PioneerReceiverControl.Rx.Model;
-using static PioneerReceiverControl.Rx.ExtensionMethod.PioneerStringEx;
 
 namespace PioneerController.Test
 {

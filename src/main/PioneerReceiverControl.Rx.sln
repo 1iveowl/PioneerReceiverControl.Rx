@@ -8,6 +8,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Main", "Main", "{E948306B-29FD-4A80-AD5C-169F067CCD47}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{21A33CDA-5B22-493D-88C2-F7D5AE962928}"
+	ProjectSection(SolutionItems) = preProject
+		..\build\build.ps1 = ..\build\build.ps1
+		..\build\PioneerReceiverControl.Rx.nuspec = ..\build\PioneerReceiverControl.Rx.nuspec
+		..\build\publish.ps1 = ..\build\publish.ps1
+		..\build\publishLocal.ps1 = ..\build\publishLocal.ps1
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{89A4E873-7636-4FBF-902D-4DE7DBF3FBB1}"
 	ProjectSection(SolutionItems) = preProject
