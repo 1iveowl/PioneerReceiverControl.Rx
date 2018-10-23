@@ -22,41 +22,49 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
 
                 var disposableByteStream = observableByteStream
                     .Subscribe(b =>
-                    {
-                        if (b != CR && b != LF && !crReceived)
                         {
-                            buffer.Add(b);
-                        }
-                        else switch (b)
-                        {
-                            case CR when !crReceived:
-                                crReceived = true;
-                                break;
-                            case CR when crReceived:
-                                //ignore additional CR's after first CR is received
-                                break;
-                            case LF when crReceived:
-                                Update(false);
-                                break;
-                            default:
+                            if (b != CR && b != LF && !crReceived)
                             {
-                                if (b != LF && crReceived && ignoreMissingLineFeed)
-                                {
-                                    Update(true);
-                                }
-
-                                break;
+                                buffer.Add(b);
                             }
-                        }
+                            else switch (b)
+                            {
+                                case CR when !crReceived:
+                                    crReceived = true;
+                                    break;
+                                case CR when crReceived:
+                                    //ignore additional CR's after first CR is received
+                                    break;
+                                case LF when crReceived:
+                                    Update(false);
+                                    break;
+                                default:
+                                {
+                                    if (b != LF && crReceived && ignoreMissingLineFeed)
+                                    {
+                                        Update(true);
+                                    }
 
-                        void Update(bool hasErrors)
+                                    break;
+                                }
+                            }
+
+                            void Update(bool hasErrors)
+                            {
+                                var str = Encoding.UTF8.GetString(buffer.ToArray());
+                                obs.OnNext(new RawResponseData(str, hasErrors));
+                                buffer.Clear();
+                                crReceived = false;
+                            }
+                        },
+                        ex =>
                         {
-                            var str = Encoding.UTF8.GetString(buffer.ToArray());
-                            obs.OnNext(new RawResponseData(str, hasErrors));
-                            buffer.Clear();
-                            crReceived = false;
-                        }
-                    });
+                            obs.OnError(ex);
+                        },
+                        () =>
+                        {
+                            obs.OnCompleted();
+                        });
 
                 return disposableByteStream;
 

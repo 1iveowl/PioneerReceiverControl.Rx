@@ -46,8 +46,8 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
             return Observable.Create<byte>(obs =>
             {
                 var tcpClientConnectObservable = ConnectAndGetStreamAsync(tcpClient, ipAddress, port).ToObservable();
-
-                var disposableTcpConnection = tcpClientConnectObservable
+                
+                return tcpClientConnectObservable
                     .SelectMany(s => Observable.While(
                         () => !_cts.Token.IsCancellationRequested,
                         Observable.FromAsync(() => ReadByteArrayAsync(s, _cts.Token))))
@@ -59,11 +59,18 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
                         _cts?.Dispose();
                     })
                     .Subscribe(
-                        obs.OnNext,
-                        obs.OnError,
-                        obs.OnCompleted);
-
-                return disposableTcpConnection;
+                        b =>
+                        {
+                            obs.OnNext(b);
+                        },
+                        ex =>
+                        {
+                            obs.OnError(ex);
+                        },
+                        () =>
+                        {
+                            obs.OnCompleted();
+                        });
             })
             .Publish().RefCount();
         }
