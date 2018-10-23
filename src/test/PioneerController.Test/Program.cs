@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Diagnostics;
 using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
@@ -93,6 +93,10 @@ namespace PioneerController.Test
             Console.WriteLine(FormateNiceStringFromResponse(result3));
 
 
+            await Task.Delay(TimeSpan.FromSeconds(15));
+
+            Console.WriteLine("Wait one");
+
             // Wait here until the user presses the ctrl-C key - alternative to Console.ReadLine();
             WaitHandle.WaitOne();
 
@@ -125,11 +129,14 @@ namespace PioneerController.Test
 
             _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
 
+            Debug.WriteLine($"Thread - Start: {Thread.CurrentThread.ManagedThreadId}");
+
             _disposableReceiverController = _receiverController.ListenerObservable
-                .ObserveOn(Scheduler.Default)
+                .Do(_ => Debug.WriteLine($"Thread - Response Main Observer: {Thread.CurrentThread.ManagedThreadId}"))
                 .Subscribe(
                     res =>
                     {
+                        Debug.WriteLine($"Thread - Response Main Subscription: {Thread.CurrentThread.ManagedThreadId}");
                         Console.WriteLine(FormateNiceStringFromResponse(res));
                     },
                     ex =>

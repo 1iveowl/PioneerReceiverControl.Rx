@@ -102,6 +102,7 @@ public class Program
         var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
         Console.WriteLine(FormateNiceStringFromResponse(result2));
 
+		await Task.Delay(TimeSpan.FromSeconds(10));
 
         // Wait here until the user presses the ctrl-C key - just an alternative to Console.ReadLine();
         WaitHandle.WaitOne();

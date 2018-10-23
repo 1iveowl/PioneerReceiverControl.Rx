@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
+using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
 using IPioneerReceiverControl.Rx.CustomException;
@@ -43,11 +45,11 @@ namespace PioneerReceiverControl.Rx
                         _isConnectionClosed = false;
 
                         return _listenerObservable
-                            .ObserveOn(Scheduler.Default)
+                            .Do(_ => Debug.WriteLine($"Thread - Listener Observe: {Thread.CurrentThread.ManagedThreadId}"))
                             .Subscribe(
                             rawResponse =>
                             {
-                                
+                                Debug.WriteLine($"Thread - Listen for Subscription: {Thread.CurrentThread.ManagedThreadId}");
                                 var commandDefinition = _commands.FirstOrDefault(c =>
                                     ResponseParserHelper.MatchResponse(c, rawResponse) != null);
 
@@ -157,16 +159,17 @@ namespace PioneerReceiverControl.Rx
 
             var receiverResponse = new ReceiverResponse();
             
-            await Observable.Create<int>(async obs =>
+            var observableSendResponse = Observable.Create<int>(async obs =>
             {
                 var disposable = _listenerObservable
-                    .ObserveOn(Scheduler.Default)
+                    .Do(_ => Debug.WriteLine($"A Thread - Listen for Response Observe: {Thread.CurrentThread.ManagedThreadId}"))
                     .Timeout(timeout)
                     .Where(r => !(r?.Data is null))
                     .Subscribe(
                         rawResponse =>
                         {
                             Debug.WriteLine($"Response: {rawResponse?.Data}");
+                            Debug.WriteLine($"Thread - Listen for Response Subscription: {Thread.CurrentThread.ManagedThreadId}");
                             var matchedResponse = ResponseParserHelper.MatchResponse(commandDefinition, rawResponse);
 
                             if (!(matchedResponse is null))
@@ -200,7 +203,8 @@ namespace PioneerReceiverControl.Rx
 
                 return disposable;
             });
-                
+
+            await observableSendResponse;
 
             return receiverResponse;
         }
@@ -231,7 +235,7 @@ namespace PioneerReceiverControl.Rx
             switch (_transportLayerType)
             {
                 case TransportLayerType.Tcp:
-                    await _tcpClient.SendCommandAsync(rawCommand);
+                    await _tcpClient.SendCommandAsync(rawCommand).ToObservable().Timeout(TimeSpan.FromSeconds(2));
                     break;
                 case TransportLayerType.SerialPort:
                     _serialPort.SendCommand(rawCommand);
@@ -244,7 +248,6 @@ namespace PioneerReceiverControl.Rx
             {
                 _isConnectionClosed = true;
             }
-            
         }
 
         public void Dispose()
