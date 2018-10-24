@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx.Model.Command;
@@ -52,17 +50,21 @@ namespace PioneerController.Test
             };
 
             // Start the TCP Listener.
-            StartTcpListener();
+            //StartTcpListener();
+
+            _tcpClient = new TcpClient();
+
+            _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
 
             //Wait for connection
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            //await Task.Delay(TimeSpan.FromSeconds(5));
 
-            // Let's send some commands
+            //// Let's send some commands
 
-            // Create a command:
+            //// Create a command:
             var command1 = new ReceiverCommand
             {
-            KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerSwitch, OnOff.On)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerSwitch, OnOff.On)
             };
 
             // Let's send the command and forget about it.
@@ -73,19 +75,26 @@ namespace PioneerController.Test
             // Create another command:
             var command2 = new ReceiverCommand
             {
-            KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
             };
 
             // Send a command and listen for the receiver to respond. 
             var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
             Console.WriteLine(FormateNiceStringFromResponse(result2));
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            //_receiverController?.Dispose();
+            //_tcpClient?.Dispose();
+
+            await Task.Delay(TimeSpan.FromSeconds(3));
+
+            //StartTcpListener();
 
             // Create another command:
             var command3 = new ReceiverCommand
             {
-            KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
             };
 
             // Send a command and listen for the receiver to respond. 
@@ -131,22 +140,22 @@ namespace PioneerController.Test
 
             Debug.WriteLine($"Thread - Start: {Thread.CurrentThread.ManagedThreadId}");
 
-            _disposableReceiverController = _receiverController.ListenerObservable
-                .Do(_ => Debug.WriteLine($"Thread - Response Main Observer: {Thread.CurrentThread.ManagedThreadId}"))
-                .Subscribe(
-                    res =>
-                    {
-                        Debug.WriteLine($"Thread - Response Main Subscription: {Thread.CurrentThread.ManagedThreadId}");
-                        Console.WriteLine(FormateNiceStringFromResponse(res));
-                    },
-                    ex =>
-                    {
-                        Console.WriteLine(ex);
-                    },
-                    () =>
-                    {
-                        Console.WriteLine("Completed.");
-                    });
+            //_disposableReceiverController = _receiverController.ListenerObservable
+            //    .Do(_ => Debug.WriteLine($"Thread - Response Main Observer: {Thread.CurrentThread.ManagedThreadId}"))
+            //    .Subscribe(
+            //        res =>
+            //        {
+            //            Debug.WriteLine($"Thread - Response Main Subscription: {Thread.CurrentThread.ManagedThreadId}");
+            //            Console.WriteLine(FormateNiceStringFromResponse(res));
+            //        },
+            //        ex =>
+            //        {
+            //            Console.WriteLine(ex);
+            //        },
+            //        () =>
+            //        {
+            //            Console.WriteLine("Completed.");
+            //        });
 
         }
 
@@ -174,9 +183,9 @@ namespace PioneerController.Test
             await Task.Delay(TimeSpan.FromSeconds(5));
 
             Console.WriteLine("Is Zone 2 on?");
-            await tcpClient.SendCommandAsync("?AP");
+            await tcpClient.SendCommandAsync("?AP", _ipAddress, _port);
             Console.WriteLine("Zone 2 Volume?");
-            await tcpClient.SendCommandAsync("?ZV");
+            await tcpClient.SendCommandAsync("?ZV", _ipAddress, _port);
 
             await Task.Delay(TimeSpan.FromSeconds(1));
 

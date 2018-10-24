@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Text;
 using System.Threading.Tasks;
-using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
 

@@ -5,13 +5,10 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
-using IPioneerReceiverControl.Rx.CustomException;
 using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
@@ -28,12 +25,13 @@ namespace PioneerReceiverControl.Rx
         private readonly TcpClient _tcpClient;
         private readonly SerialPort _serialPort;
 
+        private readonly IPAddress _ipAddress;
+        private readonly int _port;
+
         private readonly IEnumerable<IReceiverCommandDefinition> _commands;
 
         private readonly IObservable<IRawResponseData> _listenerObservable;
-
-        private bool _isListening;
-        private bool _isConnectionClosed;
+     
 
         public IObservable<IReceiverResponse> ListenerObservable
         {
@@ -41,9 +39,6 @@ namespace PioneerReceiverControl.Rx
             {
                 return Observable.Create<IReceiverResponse>(obs =>
                     {
-                        _isListening = true;
-                        _isConnectionClosed = false;
-
                         return _listenerObservable
                             .Do(_ => Debug.WriteLine($"Thread - Listener Observe: {Thread.CurrentThread.ManagedThreadId}"))
                             .Subscribe(
@@ -76,10 +71,6 @@ namespace PioneerReceiverControl.Rx
                             obs.OnError,
                             obs.OnCompleted);
                     })
-                    .Finally(() =>
-                    {
-                        _isListening = false;
-                    })
                     .Publish().RefCount();
             }
         }
@@ -92,6 +83,9 @@ namespace PioneerReceiverControl.Rx
             IPAddress ipAddress, 
             int port)
         {
+            _ipAddress = ipAddress;
+            _port = port;
+
             _listenerObservable = tcpClient
                 .ToByteStreamObservable(ipAddress, port)
                 .ToResponseObservable()
@@ -124,6 +118,9 @@ namespace PioneerReceiverControl.Rx
             IObservable<IRawResponseData> rawDataObservable,
             TcpClient tcpClient) : this(commands, rawDataObservable)
         {
+            _ipAddress = ((IPEndPoint) tcpClient.Client.RemoteEndPoint).Address;
+            _port = ((IPEndPoint) tcpClient.Client.RemoteEndPoint).Port;
+
             _transportLayerType = TransportLayerType.Tcp;
             _tcpClient = tcpClient;
         }
@@ -147,14 +144,10 @@ namespace PioneerReceiverControl.Rx
         }
 
 
-        public async Task<IReceiverResponse> SendReceiverCommandAndTryWaitForResponseAsync(IReceiverCommand command,
+        public async Task<IReceiverResponse> SendReceiverCommandAndTryWaitForResponseAsync(
+            IReceiverCommand command,
             TimeSpan timeout)
         {
-            if (!_isListening && _isConnectionClosed)
-            {
-                throw new PioneerReceiverException("When no listener is defined, a new Receiver object have to be created for every Send Command ");
-            }
-
             var commandDefinition = _commands.FirstOrDefault(c => c.CommandName == command.KeyValue.Key);
 
             var receiverResponse = new ReceiverResponse();
@@ -212,11 +205,6 @@ namespace PioneerReceiverControl.Rx
 
         public async Task SendReceiverCommandAndForgetAsync(IReceiverCommand command)
         {
-            if (!_isListening && _isConnectionClosed)
-            {
-                throw new PioneerReceiverException("When no listener is defined, a new Receiver object have to be created for every Send Command ");
-            }
-
             var rawCommand = CreateRawCommand(command);
 
             await SendAsync(rawCommand);
@@ -231,11 +219,10 @@ namespace PioneerReceiverControl.Rx
 
         private async Task SendAsync(string rawCommand)
         {
-
             switch (_transportLayerType)
             {
                 case TransportLayerType.Tcp:
-                    await _tcpClient.SendCommandAsync(rawCommand).ToObservable().Timeout(TimeSpan.FromSeconds(2));
+                    await _tcpClient.SendCommandAsync(rawCommand, _ipAddress, _port);
                     break;
                 case TransportLayerType.SerialPort:
                     _serialPort.SendCommand(rawCommand);
@@ -243,17 +230,12 @@ namespace PioneerReceiverControl.Rx
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            if (!_isListening)
-            {
-                _isConnectionClosed = true;
-            }
         }
 
         public void Dispose()
         {
-            _tcpClient?.Dispose();
-            _serialPort?.Dispose();
+            //_tcpClient?.Dispose();
+            //_serialPort?.Dispose();
         }
     }
 }

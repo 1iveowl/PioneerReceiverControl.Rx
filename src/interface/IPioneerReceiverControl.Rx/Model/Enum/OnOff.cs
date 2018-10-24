@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace IPioneerReceiverControl.Rx.Model.Enum
+﻿namespace IPioneerReceiverControl.Rx.Model.Enum
 {
     public enum OnOff
     {

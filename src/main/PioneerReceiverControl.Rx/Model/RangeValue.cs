@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using IPioneerReceiverControl.Rx.Model;
+﻿using IPioneerReceiverControl.Rx.Model;
 
 namespace PioneerReceiverControl.Rx.Model
 {

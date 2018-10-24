@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,68 +9,80 @@ using System.Reactive.Threading.Tasks;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using IPioneerReceiverControl.Rx.CustomException;
 
 namespace PioneerReceiverControl.Rx.ExtensionMethod
 {
     public static class TcpClientEx
     {
-        private static CancellationTokenSource _cts;
-
-        public static async Task SendCommandAsync(this TcpClient tcpClient, string command, CancellationToken ct = default)
+        public static async Task SendCommandAsync(this TcpClient tcpClient, string command, IPAddress ipAddress, int port, CancellationToken ct = default)
         {
             // Ensure that the Receiver is on before sending command
-            await SendCommand(tcpClient, "\r", ct);
+            await SendCommand(tcpClient, "\r", ipAddress, port, ct);
             await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
-            await SendCommand(tcpClient, "\r", ct);
+            await SendCommand(tcpClient, "\r", ipAddress, port, ct);
 
-            await SendCommand(tcpClient, command, ct);
+            await SendCommand(tcpClient, command, ipAddress, port, ct);
         }
 
-        private static async Task SendCommand(TcpClient tcpClient, string command, CancellationToken ct)
+        private static async Task SendCommand(TcpClient tcpClient, string command, IPAddress ipAddress, int port, CancellationToken ct)
         {
-            var bArray = Encoding.UTF8.GetBytes($"{command}\r");
+            var bArray = Encoding.UTF8.GetBytes(command != "\r" ? $"{command}\r" : $"\r");
 
+            if (!tcpClient.Connected)
+            {
+
+                // TODO Test if the client is connected to the same hos as the IPAddress and port supplied
+
+
+                await tcpClient.ConnectAsync(ipAddress, port);
+
+                if (!tcpClient.Client.Connected)
+                {
+                    throw new PioneerReceiverException($"Unable to connect to host: {ipAddress}:{port}");
+                }
+            }
+            
             var writeStream = tcpClient.GetStream();
 
             if (writeStream?.CanWrite ?? false)
             {
                 await writeStream.WriteAsync(bArray, 0, bArray.Length, ct);
             }
+            else
+            {
+                throw new PioneerReceiverException($"Unable to get write stream from host: {ipAddress}:{port}");
+            }
+
         }
 
         public static IObservable<byte> ToByteStreamObservable(this TcpClient tcpClient, IPAddress ipAddress, int port)
         {
-            _cts = new CancellationTokenSource();
-
             return Observable.Create<byte>(obs =>
-            {
-                var tcpClientConnectObservable = ConnectAndGetStreamAsync(tcpClient, ipAddress, port).ToObservable();
-                
-                return tcpClientConnectObservable
-                    .SelectMany(s => Observable.While(
-                        () => !_cts.Token.IsCancellationRequested,
-                        Observable.FromAsync(() => ReadByteArrayAsync(s, _cts.Token))))
-                    .SelectMany(a => a.ToList())
-                    .Finally(() =>
-                    {
-                        _cts?.Cancel();
-                        tcpClient?.Close();
-                        _cts?.Dispose();
-                    })
-                    .Subscribe(
-                        b =>
-                        {
-                            obs.OnNext(b);
-                        },
-                        ex =>
-                        {
-                            obs.OnError(ex);
-                        },
-                        () =>
-                        {
-                            obs.OnCompleted();
-                        });
-            })
+                {
+                    var tcpClientConnectObservable = tcpClient.Connected 
+                        ? Observable.Return(tcpClient.GetStream() as Stream) 
+                        : ConnectAndGetStreamAsync(tcpClient, ipAddress, port).ToObservable();
+
+                    return tcpClientConnectObservable
+                        .SelectMany(s => Observable.While(
+                            () => tcpClient.Connected,
+                            Observable.FromAsync(() => ReadByteArrayAsync(s))))
+                        .SelectMany(a => a.ToList())
+                        .Subscribe(
+                            b =>
+                            {
+                                obs.OnNext(b);
+                            },
+                            ex =>
+                            {
+                                obs.OnError(ex);
+                            },
+                            () =>
+                            {
+                                obs.OnCompleted();
+                            });
+                })
             .Publish().RefCount();
         }
 
@@ -83,13 +94,8 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
         }
 
 
-        private static async Task<byte[]> ReadByteArrayAsync(Stream stream, CancellationToken ct)
+        private static async Task<byte[]> ReadByteArrayAsync(Stream stream)
         {
-            if (ct.IsCancellationRequested)
-            {
-                return Enumerable.Empty<byte>().ToArray();
-            }
-
             var oneByteArray = new byte[1];
 
             try
@@ -106,26 +112,17 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
 
                 try
                 {
-                    var bytesRead = await stream.ReadAsync(oneByteArray, 0, 1, ct).ConfigureAwait(false);
+                    var bytesRead = await stream.ReadAsync(oneByteArray, 0, 1).ConfigureAwait(false);
 
                     if (bytesRead < oneByteArray.Length)
                     {
                         throw new Exception("Stream connection aborted unexpectedly. Check connection and socket security version/TLS version).");
                     }
                 }
-                catch (IOException ex)
+                catch (IOException)
                 {
-                    if (_cts?.IsCancellationRequested ?? true)
-                    {
-                        Debug.WriteLine($"OK to ignore this exception when closing connection | '{ex.Message}'");
-
-                        return Enumerable.Empty<byte>().ToArray();
-                    }
-
-                    throw ex;
+                    // OK to ignore
                 }
-
-
             }
             catch (ObjectDisposedException)
             {
