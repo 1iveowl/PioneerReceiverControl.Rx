@@ -108,7 +108,7 @@ namespace PioneerReceiverControl.Rx.Data
                     CommandTemplate = "?ZV",
                     CommandParameterType = typeof(Empty),
                     ResponseTemplate = "ZV**",
-                    ResponseParameterType = typeof(IVolume)
+                    ResponseParameterType = typeof(IZoneVolume)
                 },
                 new ReceiverCommandDefinition
                 {
@@ -117,16 +117,16 @@ namespace PioneerReceiverControl.Rx.Data
                     CommandTemplate = "Z*",
                     CommandParameterType = typeof(UpDown),
                     ResponseTemplate = "ZV**",
-                    ResponseParameterType = typeof(IVolume)
+                    ResponseParameterType = typeof(IZoneVolume)
                 },
                 new ReceiverCommandDefinition
                 {
                     Function = "Zone 2 Volume Set",
                     CommandName = CommandName.Zone2VolumeSet,
                     CommandTemplate = "**ZV",
-                    CommandParameterType = typeof(IVolume),
+                    CommandParameterType = typeof(IZoneVolume),
                     ResponseTemplate = "ZV**",
-                    ResponseParameterType = typeof(IVolume)
+                    ResponseParameterType = typeof(IZoneVolume)
                 },
                 new ReceiverCommandDefinition
                 {

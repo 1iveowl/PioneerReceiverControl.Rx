@@ -121,6 +121,11 @@ namespace PioneerReceiverControl.Rx.Converter
                 parameter = volume.NummericValue?.ToString("000");
             }
 
+            if (command.KeyValue.Value is IZoneVolume zoneVolume)
+            {
+                parameter = zoneVolume.NummericValue?.ToString("00");
+            }
+
             return commandDefinition.CommandTemplate.WildcardReplace('*', parameter);
         }
     }

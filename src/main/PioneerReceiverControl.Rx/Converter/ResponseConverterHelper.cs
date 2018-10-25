@@ -14,10 +14,11 @@ namespace PioneerReceiverControl.Rx.Converter
                 case CommandName.VolumeControl:
                 case CommandName.VolumeStatus:
                 case CommandName.VolumeSet:
+                    return GetVolumeRangeValue(parameter);
                 case CommandName.Zone2VolumeControl:
                 case CommandName.Zone2VolumeStatus:
                 case CommandName.Zone2VolumeSet:
-                    return GetVolumeRangeValue(parameter);
+                    return GetZoneVolumeRangeValue(parameter);
                 case CommandName.TrebleControl:
                     return null;
                 default:
@@ -25,7 +26,7 @@ namespace PioneerReceiverControl.Rx.Converter
             }
         }
 
-        private static RangeValue GetVolumeRangeValue(string parameter)
+        private static RangeValue GetZoneVolumeRangeValue(string parameter)
         {
             RangeValue rangeValueZoneVolume = null;
 
@@ -45,6 +46,28 @@ namespace PioneerReceiverControl.Rx.Converter
             }
 
             return rangeValueZoneVolume;
+        }
+
+        private static RangeValue GetVolumeRangeValue(string parameter)
+        {
+
+            RangeValue rangeValueVolume = null;
+
+            if (int.TryParse(parameter, out var vol))
+            {
+                rangeValueVolume = new RangeValue
+                {
+                    Max = 185,
+                    Min = 0,
+                    StepInterval = 2,
+                    NummericValue = vol != 0 ? (double?)vol / 2 - 80 : null,
+                };
+                rangeValueVolume.StringValue = rangeValueVolume.NummericValue != null
+                    ? $"{rangeValueVolume.NummericValue}db"
+                    : "---.-db";
+            }
+
+            return rangeValueVolume;
         }
     }
 }
