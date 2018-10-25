@@ -26,7 +26,7 @@ namespace PioneerReceiverControl.Rx.Converter
                 response.ResponseValue = parameter == "0";
             }
 
-            if (commandDefinition.ResponseParameterType == typeof(IRangeValue))
+            if (commandDefinition.ResponseParameterType == typeof(IVolume))
             {
                 response.ResponseValue = ResponseConverterHelper.Convert(commandDefinition.CommandName, parameter);
             }
@@ -65,7 +65,7 @@ namespace PioneerReceiverControl.Rx.Converter
                 throw new PioneerReceiverException($"Template is undefined for: {command.KeyValue.Key}");
             }
 
-            if (command.KeyValue.Value is null)
+            if (command.KeyValue.Value is null || string.IsNullOrEmpty(command.KeyValue.Value?.ToString()))
             {
                 return commandDefinition.CommandTemplate;
             }
@@ -101,6 +101,11 @@ namespace PioneerReceiverControl.Rx.Converter
             if (command.KeyValue.Value is ListeningMode listeningMode)
             {
                 parameter = ((int)listeningMode).ToString("0000");
+            }
+
+            if (command.KeyValue.Value is IVolume volume)
+            {
+                parameter = volume.NummericValue?.ToString("000");
             }
 
             return commandDefinition.CommandTemplate.WildcardReplace('*', parameter);

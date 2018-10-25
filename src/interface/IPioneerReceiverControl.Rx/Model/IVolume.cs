@@ -1,6 +1,6 @@
 ﻿namespace IPioneerReceiverControl.Rx.Model
 {
-    public interface IVolume
+    public interface IVolume : IRangeValue
     {
 
     }

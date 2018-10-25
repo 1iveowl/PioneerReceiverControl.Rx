@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
 using PioneerReceiverControl.Rx;
@@ -34,7 +35,7 @@ namespace PioneerController.Test
         private static async Task Main(string[] args)
         {
             _ipAddress = IPAddress.Parse("192.168.0.24");
-            _port = 23;
+            _port = 8102;
 
             _commandDefinitions = new DefaultReceiverCommandDefinition().GetDefaultDefinitions;
 
@@ -75,7 +76,7 @@ namespace PioneerController.Test
             // Create another command:
             var command2 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, null)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, string.Empty)
             };
 
             // Send a command and listen for the receiver to respond. 
@@ -108,6 +109,9 @@ namespace PioneerController.Test
 
             // Wait here until the user presses the ctrl-C key - alternative to Console.ReadLine();
             WaitHandle.WaitOne();
+
+            _receiverController?.Dispose();
+            _tcpClient?.Close();
 
             Console.WriteLine("...End...");
             Console.ReadLine();

@@ -20,14 +20,13 @@ namespace PioneerReceiverControl.Rx.ExtensionMethod
             // Ensure that the Receiver is on before sending command
             await SendCommand(tcpClient, "\r", ipAddress, port, ct);
             await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
-            await SendCommand(tcpClient, "\r", ipAddress, port, ct);
 
             await SendCommand(tcpClient, command, ipAddress, port, ct);
         }
 
         private static async Task SendCommand(TcpClient tcpClient, string command, IPAddress ipAddress, int port, CancellationToken ct)
         {
-            var bArray = Encoding.UTF8.GetBytes(command != "\r" ? $"{command}\r" : $"\r");
+            var bArray = Encoding.UTF8.GetBytes(command != "\r" ? $"\r{command}\r" : $"\r");
 
             if (!tcpClient.Connected)
             {

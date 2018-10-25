@@ -25,7 +25,7 @@ namespace PioneerReceiverControl.Rx.Data
                     Function = "Power Status",
                     CommandName = CommandName.PowerStatus,
                     CommandTemplate = "?*",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "PWR*",
                     ResponseParameterType = typeof(OnOff),
                 },
@@ -36,25 +36,25 @@ namespace PioneerReceiverControl.Rx.Data
                     CommandTemplate = "V*",
                     CommandParameterType = typeof(UpDown),
                     ResponseTemplate = "VOL***",
-                    ResponseParameterType = typeof(IRangeValue)
+                    ResponseParameterType = typeof(IVolume)
                 },
                 new ReceiverCommandDefinition
                 {
                     Function = "Volume Set",
                     CommandName = CommandName.VolumeSet,
                     CommandTemplate = "***VL",
-                    CommandParameterType = typeof(UpDown),
+                    CommandParameterType = typeof(IVolume),
                     ResponseTemplate = "VOL***",
-                    ResponseParameterType = typeof(IRangeValue)
+                    ResponseParameterType = typeof(IVolume)
                 },
                 new ReceiverCommandDefinition
                 {
                     Function = "Volume Status",
                     CommandName = CommandName.VolumeStatus,
                     CommandTemplate = "?V",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "VOL***",
-                    ResponseParameterType = typeof(IRangeValue)
+                    ResponseParameterType = typeof(IVolume)
                 },
                 new ReceiverCommandDefinition
                 {
@@ -70,7 +70,7 @@ namespace PioneerReceiverControl.Rx.Data
                     Function = "Mute Status",
                     CommandName = CommandName.MuteStatus,
                     CommandTemplate = "?M",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "MUT*",
                     ResponseParameterType = typeof(OnOff),
                 },
@@ -106,9 +106,9 @@ namespace PioneerReceiverControl.Rx.Data
                     Function = "Zone 2 Volume Status",
                     CommandName = CommandName.Zone2VolumeStatus,
                     CommandTemplate = "?ZV",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "ZV**",
-                    ResponseParameterType = typeof(IRangeValue)
+                    ResponseParameterType = typeof(IVolume)
                 },
                 new ReceiverCommandDefinition
                 {
@@ -117,7 +117,16 @@ namespace PioneerReceiverControl.Rx.Data
                     CommandTemplate = "Z*",
                     CommandParameterType = typeof(UpDown),
                     ResponseTemplate = "ZV**",
-                    ResponseParameterType = typeof(IRangeValue)
+                    ResponseParameterType = typeof(IVolume)
+                },
+                new ReceiverCommandDefinition
+                {
+                    Function = "Zone 2 Volume Set",
+                    CommandName = CommandName.Zone2VolumeSet,
+                    CommandTemplate = "**ZV",
+                    CommandParameterType = typeof(IVolume),
+                    ResponseTemplate = "ZV**",
+                    ResponseParameterType = typeof(IVolume)
                 },
                 new ReceiverCommandDefinition
                 {
@@ -133,7 +142,7 @@ namespace PioneerReceiverControl.Rx.Data
                     Function = "Zone 2 Input Status",
                     CommandName = CommandName.Zone2InputStatus,
                     CommandTemplate = "?ZS",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "Z2F**",
                     ResponseParameterType = typeof(InputType)
                 },
@@ -151,7 +160,7 @@ namespace PioneerReceiverControl.Rx.Data
                     Function = "Listening Mode Status",
                     CommandName = CommandName.ListeningModeStatus,
                     CommandTemplate = "?S",
-                    CommandParameterType = null,
+                    CommandParameterType = typeof(Empty),
                     ResponseTemplate = "SR****",
                     ResponseParameterType = typeof(ListeningMode)
                 },
