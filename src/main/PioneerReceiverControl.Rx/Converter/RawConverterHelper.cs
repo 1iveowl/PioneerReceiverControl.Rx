@@ -1,4 +1,6 @@
-﻿using IPioneerReceiverControl.Rx.CustomException;
+﻿using System.Diagnostics;
+using System.Linq;
+using IPioneerReceiverControl.Rx.CustomException;
 using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
@@ -75,12 +77,23 @@ namespace PioneerReceiverControl.Rx.Converter
                 throw new PioneerReceiverException($"Unknown command: {command.KeyValue.Key}");
             }
 
-            if (commandDefinition.CommandParameterType != command.KeyValue.Value.GetType())
+            if (commandDefinition.CommandParameterType.IsInterface)
             {
-                throw new PioneerReceiverException($"Wrong command type: '{command.KeyValue.Value.GetType()}'. " +
-                                                   $"Expected: '{commandDefinition.ResponseParameterType}'");
+                if (commandDefinition.CommandParameterType != command.KeyValue.Value.GetType().GetInterfaces().FirstOrDefault())
+                {
+                    throw new PioneerReceiverException($"Wrong command interface type: '{command.KeyValue.Value.GetType().GetInterfaces().FirstOrDefault()}'. " +
+                                                       $"Expected: '{commandDefinition.CommandParameterType}'");
+                }
             }
-
+            else
+            {
+                if (commandDefinition.CommandParameterType != command.KeyValue.Value.GetType())
+                {
+                    throw new PioneerReceiverException($"Wrong command type: '{command.KeyValue.Value.GetType()}'. " +
+                                                       $"Expected: '{commandDefinition.CommandParameterType}'");
+                }
+            }
+            
             string parameter = null;
 
             if (command.KeyValue.Value is UpDown direction)

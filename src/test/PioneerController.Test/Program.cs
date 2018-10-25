@@ -93,9 +93,11 @@ namespace PioneerController.Test
             //StartTcpListener();
 
             // Create another command:
+
+
             var command3 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeControl, UpDown.Up)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeSet, new Volume{NummericValue = 101} as IVolume)
             };
 
             // Send a command and listen for the receiver to respond. 
