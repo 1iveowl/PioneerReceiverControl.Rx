@@ -35,6 +35,7 @@
       <group targetFramework="netstandard2.0">
         <dependency id="System.Reactive" version="4.1.2"/>
         <dependency id="System.IO.Ports" version="4.5.0"/>
+        <dependency id="Newtonsoft.Json" version="11.0.2"/>
       </group>
     </dependencies>
   </metadata>

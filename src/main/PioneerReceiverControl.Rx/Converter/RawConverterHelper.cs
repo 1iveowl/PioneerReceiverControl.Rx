@@ -16,24 +16,24 @@ namespace PioneerReceiverControl.Rx.Converter
             IRawResponseData data,
             string parameter)
         {
+            Debug.WriteLine($"Response type: {commandDefinition.ResponseParameterType}");
+
             var response = new ReceiverResponse
             {
                 ResponseTime = data.TimeStamp,
                 WaitingForResponseTimedOut = false,
-                ResponseToCommand = commandDefinition.CommandName.ToString()
+                ResponseToCommand = commandDefinition.CommandName.ToString(),
+                RawResponse = data.Data,
+                IsSuccessful = true
             };
 
             if (commandDefinition.ResponseParameterType == typeof(OnOff))
             {
                 response.ResponseValue = parameter == "0";
-            }
-
-            if (commandDefinition.ResponseParameterType == typeof(IVolume))
+            } else if (commandDefinition.ResponseParameterType == typeof(IVolume) || commandDefinition.ResponseParameterType == typeof(IZoneVolume))
             {
                 response.ResponseValue = ResponseConverterHelper.Convert(commandDefinition.CommandName, parameter);
-            }
-
-            if (commandDefinition.ResponseParameterType == typeof(InputType))
+            } else if (commandDefinition.ResponseParameterType == typeof(InputType))
             {
                 if (int.TryParse(parameter, out var inputTypeNumber))
                 {
@@ -43,9 +43,7 @@ namespace PioneerReceiverControl.Rx.Converter
                 {
                     response.ResponseValue = InputType.Unknown;
                 }
-            }
-
-            if (commandDefinition.ResponseParameterType == typeof(ListeningMode))
+            } else if (commandDefinition.ResponseParameterType == typeof(ListeningMode))
             {
                 if (int.TryParse(parameter, out var listeningModeNumber))
                 {
@@ -55,6 +53,11 @@ namespace PioneerReceiverControl.Rx.Converter
                 {
                     response.ResponseValue = ListeningMode.Unknown;
                 }
+            }
+            else
+            {
+                response.ResponseValue = null;
+                response.IsSuccessful = false;
             }
 
             return response;
@@ -79,7 +82,7 @@ namespace PioneerReceiverControl.Rx.Converter
 
             if (commandDefinition.CommandParameterType.IsInterface)
             {
-                if (commandDefinition.CommandParameterType != command.KeyValue.Value.GetType().GetInterfaces().FirstOrDefault())
+                if (!command.KeyValue.Value.GetType().GetInterfaces().Contains(commandDefinition.CommandParameterType))
                 {
                     throw new PioneerReceiverException($"Wrong command interface type: '{command.KeyValue.Value.GetType().GetInterfaces().FirstOrDefault()}'. " +
                                                        $"Expected: '{commandDefinition.CommandParameterType}'");
@@ -118,12 +121,12 @@ namespace PioneerReceiverControl.Rx.Converter
 
             if (command.KeyValue.Value is IVolume volume)
             {
-                parameter = volume.NummericValue?.ToString("000");
+                parameter = volume.PioneerInternalValue?.ToString("000");
             }
 
             if (command.KeyValue.Value is IZoneVolume zoneVolume)
             {
-                parameter = zoneVolume.NummericValue?.ToString("00");
+                parameter = zoneVolume.PioneerInternalValue?.ToString("00");
             }
 
             return commandDefinition.CommandTemplate.WildcardReplace('*', parameter);

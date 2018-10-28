@@ -4,6 +4,7 @@ namespace IPioneerReceiverControl.Rx.Model.Command
 {
     public interface IReceiverResponse
     {
+        bool IsSuccessful { get; }
         string ResponseToCommand { get; }
         object ResponseValue { get; }
         DateTime ResponseTime { get; }

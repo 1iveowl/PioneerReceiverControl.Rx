@@ -24,7 +24,7 @@ namespace PioneerReceiverControl.Rx.Data
                 {
                     Function = "Power Status",
                     CommandName = CommandName.PowerStatus,
-                    CommandTemplate = "?*",
+                    CommandTemplate = "?P",
                     CommandParameterType = typeof(Empty),
                     ResponseTemplate = "PWR*",
                     ResponseParameterType = typeof(OnOff),

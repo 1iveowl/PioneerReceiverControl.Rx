@@ -56,6 +56,7 @@ namespace PioneerReceiverControl.Rx
                                         ResponseTime = DateTime.Now,
                                         ResponseToCommand = "Unknown",
                                         WaitingForResponseTimedOut = false,
+                                        RawResponse = rawResponse.Data
                                     });
 
                                     return;
@@ -167,9 +168,16 @@ namespace PioneerReceiverControl.Rx
 
                             if (!(matchedResponse is null))
                             {
-                                receiverResponse = ConvertToResponse(commandDefinition, rawResponse, matchedResponse);
-                                obs.OnNext(1);
-                                obs.OnCompleted();
+                                try
+                                {
+                                    receiverResponse = ConvertToResponse(commandDefinition, rawResponse, matchedResponse);
+                                }
+                                catch (Exception) { }
+                                finally
+                                {
+                                    obs.OnNext(1);
+                                    obs.OnCompleted();
+                                }
                             }
                         },
                         ex =>
@@ -183,7 +191,7 @@ namespace PioneerReceiverControl.Rx
                             else
                             {
                                 obs.OnNext(0);
-                                obs.OnError(ex);
+                                obs.OnCompleted();
                             }
                         },
                         () =>
@@ -192,7 +200,16 @@ namespace PioneerReceiverControl.Rx
                             obs.OnCompleted();
                         });
 
-                await SendAsync(CreateRawCommand(command));
+                try
+                {
+                    await SendAsync(CreateRawCommand(command));
+                }
+                catch (Exception) { }
+                finally
+                {
+                    obs.OnNext(0);
+                    obs.OnCompleted();
+                }
 
                 return disposable;
             });

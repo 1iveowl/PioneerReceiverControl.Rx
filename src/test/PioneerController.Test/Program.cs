@@ -35,7 +35,7 @@ namespace PioneerController.Test
         private static async Task Main(string[] args)
         {
             _ipAddress = IPAddress.Parse("192.168.0.24");
-            _port = 8102;
+            _port = 23;
 
             _commandDefinitions = new DefaultReceiverCommandDefinition().GetDefaultDefinitions;
 
@@ -54,6 +54,13 @@ namespace PioneerController.Test
             //StartTcpListener();
 
             _tcpClient = new TcpClient();
+            var lingerOption = new LingerOption(true, 0);
+
+            _tcpClient.LingerState = lingerOption;
+
+            //_tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            //_tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+
 
             _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
 
@@ -65,22 +72,38 @@ namespace PioneerController.Test
             //// Create a command:
             var command1 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerSwitch, OnOff.On)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerStatus, null)
             };
 
             // Let's send the command and forget about it.
-            await _receiverController.SendReceiverCommandAndForgetAsync(command1);
+            var result1 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command1, TimeSpan.FromSeconds(10));
+            Console.WriteLine(FormateNiceStringFromResponse(result1));
+            
+            //_tcpClient.Client.Shutdown(SocketShutdown.Both);
+            //_tcpClient.Client.Disconnect(true);
+            
+            _tcpClient.GetStream().Close();
+            _tcpClient.Dispose();
+
+            //await _tcpClient.Client.DisconnectAsync(true);
+            //_tcpClient.GetStream().Close();
+            //_tcpClient.Close();
+            _receiverController.Dispose();
 
             await Task.Delay(TimeSpan.FromSeconds(3));
+
+            _tcpClient = new TcpClient();
+
+            _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
 
             // Create another command:
             var command2 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeStatus, string.Empty)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerStatus, null)
             };
 
             // Send a command and listen for the receiver to respond. 
-            var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(2));
+            var result2 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command2, TimeSpan.FromSeconds(10));
             Console.WriteLine(FormateNiceStringFromResponse(result2));
 
             await Task.Delay(TimeSpan.FromSeconds(1));
@@ -97,11 +120,11 @@ namespace PioneerController.Test
 
             var command3 = new ReceiverCommand
             {
-                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeSet, new Volume{NummericValue = 101} as IVolume)
+                KeyValue = new KeyValuePair<CommandName, object>(CommandName.VolumeSet, new Volume{PioneerInternalValue = 101})
             };
 
             // Send a command and listen for the receiver to respond. 
-            var result3 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command3, TimeSpan.FromSeconds(2));
+            var result3 = await _receiverController.SendReceiverCommandAndTryWaitForResponseAsync(command3, TimeSpan.FromSeconds(10));
             Console.WriteLine(FormateNiceStringFromResponse(result3));
 
 
