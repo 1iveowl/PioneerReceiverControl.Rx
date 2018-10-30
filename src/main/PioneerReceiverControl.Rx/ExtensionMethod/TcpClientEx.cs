@@ -13,46 +13,68 @@ using IPioneerReceiverControl.Rx.CustomException;
 
 namespace PioneerReceiverControl.Rx.ExtensionMethod
 {
-    public static class TcpClientEx
+    public static class TcpClientEx   
     {
         public static async Task SendCommandAsync(this TcpClient tcpClient, string command, IPAddress ipAddress, int port, CancellationToken ct = default)
         {
-            // Ensure that the Receiver is on before sending command
             await SendCommand(tcpClient, "\r", ipAddress, port, ct);
-            await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
+            await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
+            await SendCommand(tcpClient, $"\r{command}\r", ipAddress, port, ct);
+        }
 
-            await SendCommand(tcpClient, command, ipAddress, port, ct);
+        public static async Task SendPingAsync(this TcpClient tcpClient, IPAddress ipAddress, int port, CancellationToken ct = default)
+        {
+            await SendCommand(tcpClient, "", ipAddress, port, ct);
+            //await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
+            //await SendCommand(tcpClient, "", ipAddress, port, ct);
+            await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
         }
 
         private static async Task SendCommand(TcpClient tcpClient, string command, IPAddress ipAddress, int port, CancellationToken ct)
         {
-            var bArray = Encoding.UTF8.GetBytes(command != "\r" ? $"\r{command}\r" : $"\r");
+            var bArray = Encoding.UTF8.GetBytes(command);
 
-            if (!tcpClient.Connected)
+            if (!tcpClient.Connected && !tcpClient.Client.Connected)
             {
+                await ConnectAsync(tcpClient, ipAddress, port, ct);
+            }
+            try
+            {
+                var writeStream = tcpClient.GetStream();
 
-                // TODO Test if the client is connected to the same hos as the IPAddress and port supplied
+                if (writeStream?.CanWrite ?? false)
+                {
+                    await writeStream.WriteAsync(bArray, 0, bArray.Length, ct);
+                }
+                else
+                {
+                    Debug.WriteLine($"Unable to get Write Stream from host: {ipAddress}:{port}");
+                    //throw new PioneerReceiverException($"Unable to get Write Stream from host: {ipAddress}:{port}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Command send failed: {(string.IsNullOrEmpty(command) ? "null" : command)} - Exception {ex}");
+            }
+        }
 
-
+        private static async Task ConnectAsync(TcpClient tcpClient, IPAddress ipAddress, int port, CancellationToken ct)
+        {
+            try
+            {
                 await tcpClient.ConnectAsync(ipAddress, port);
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
 
                 if (!tcpClient.Client.Connected)
                 {
                     throw new PioneerReceiverException($"Unable to connect to host: {ipAddress}:{port}");
                 }
             }
-            
-            var writeStream = tcpClient.GetStream();
-
-            if (writeStream?.CanWrite ?? false)
+            catch (Exception ex)
             {
-                await writeStream.WriteAsync(bArray, 0, bArray.Length, ct);
+                throw new PioneerReceiverException($"Unable to connect to host: {ipAddress}:{port}", ex);
             }
-            else
-            {
-                throw new PioneerReceiverException($"Unable to get write stream from host: {ipAddress}:{port}");
-            }
-
         }
 
         public static IObservable<byte> ToByteStreamObservable(this TcpClient tcpClient, IPAddress ipAddress, int port)

@@ -56,13 +56,16 @@ namespace PioneerController.Test
 
             _tcpClient = new TcpClient();
             var lingerOption = new LingerOption(true, 0);
-
+            
             _tcpClient.LingerState = lingerOption;
+            _tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
             _receiverController = new ReceiverController(_commandDefinitions, _tcpClient, _ipAddress, _port);
             
             while (isTesting)
             {
+                await Task.Delay(TimeSpan.FromSeconds(15));
+
                 var command1 = new ReceiverCommand
                 {
                     KeyValue = new KeyValuePair<CommandName, object>(CommandName.PowerStatus, null)
@@ -80,25 +83,32 @@ namespace PioneerController.Test
                     {
                         if (result1.IsSuccessful)
                         {
+                            Console.ForegroundColor = ConsoleColor.White;
                             Console.WriteLine(FormateNiceStringFromResponse(result1));
+                            Console.WriteLine($"Thread: {Thread.CurrentThread.ManagedThreadId}");
+                            Console.WriteLine($"-----------------------------");
                         }
                         else
                         {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.WriteLine($"Timed out: {result1.WaitingForResponseTimedOut}");
                             Console.WriteLine($"Value: {(result1.ResponseValue is null ? "null" : result1.GetValueJson())}");
+                            Console.WriteLine($"Thread: {Thread.CurrentThread.ManagedThreadId}");
+                            Console.WriteLine($"-----------------------------");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"Exception: {ex}, inner: {ex.InnerException}");
+                    Console.WriteLine($"Thread: {Thread.CurrentThread.ManagedThreadId}");
+                    Console.WriteLine($"-----------------------------");
                 }
 
                 var rnd = new Random();
-
                 var randomWait = rnd.Next(5, 8);
-
-                await Task.Delay(TimeSpan.FromSeconds(randomWait));
+                await Task.Delay(TimeSpan.FromMinutes(randomWait));
             }
 
             ////Wait for connection

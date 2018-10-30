@@ -5,12 +5,14 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
+using IPioneerReceiverControl.Rx.CustomException;
 using IPioneerReceiverControl.Rx.Model;
 using IPioneerReceiverControl.Rx.Model.Command;
 using IPioneerReceiverControl.Rx.Model.Enum;
@@ -29,6 +31,7 @@ namespace PioneerReceiverControl.Rx
 
         private readonly IPAddress _ipAddress;
         private readonly int _port;
+        private readonly IDisposable _disposableKeepalive;
 
         private readonly IEnumerable<IReceiverCommandDefinition> _commands;
 
@@ -84,7 +87,8 @@ namespace PioneerReceiverControl.Rx
             IEnumerable<IReceiverCommandDefinition> commands, 
             TcpClient tcpClient, 
             IPAddress ipAddress, 
-            int port)
+            int port,
+            TimeSpan keepAlive = default)
         {
             _ipAddress = ipAddress;
             _port = port;
@@ -98,6 +102,27 @@ namespace PioneerReceiverControl.Rx
 
             _transportLayerType = TransportLayerType.Tcp;
             _tcpClient = tcpClient;
+
+            if (keepAlive == default)
+            {
+                keepAlive = TimeSpan.FromSeconds(10);
+            }
+
+            _disposableKeepalive = Observable.Interval(keepAlive)
+                .Select(_ => Observable.FromAsync(ct => _tcpClient.SendPingAsync(_ipAddress, port, ct)))
+                .Concat()
+                .Subscribe(_ =>
+                    {
+                        Debug.WriteLine($"Ping send");
+                    },
+                    ex =>
+                    {
+                        Debug.WriteLine($"Ping failed: {ex}");
+                    },
+                    () =>
+                    {
+                        Debug.WriteLine($"Ping ended");
+                    });
         }
 
         public ReceiverController(
@@ -160,6 +185,7 @@ namespace PioneerReceiverControl.Rx
                 var disposableListener = _listenerObservable
                     .Do(_ => Debug.WriteLine($"A Thread - Listen for Response Observe: {Thread.CurrentThread.ManagedThreadId}"))
                     .Timeout(timeout)
+                    //.ObserveOn(Scheduler.CurrentThread)
                     .Where(r => !(r?.Data is null))
                     .Subscribe(
                         rawResponse =>
@@ -202,7 +228,8 @@ namespace PioneerReceiverControl.Rx
                             obs.OnCompleted();
                         });
 
-                var disposableSend = SendAsync(CreateRawCommand(command)).ToObservable()
+                var disposableSend = SendAsync(CreateRawCommand(command))
+                    .ToObservable()
                     .Subscribe(
                         _ =>
                         {
@@ -220,7 +247,15 @@ namespace PioneerReceiverControl.Rx
                 return new CompositeDisposable(disposableListener, disposableSend);
             });
 
-            return await observableSendResponse;
+            try
+            {
+                var response = await observableSendResponse; //.ObserveOn(Scheduler.CurrentThread);
+                return response;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
 
@@ -255,6 +290,7 @@ namespace PioneerReceiverControl.Rx
 
         public void Dispose()
         {
+            _disposableKeepalive?.Dispose();
             //_tcpClient?.Dispose();
             //_serialPort?.Dispose();
         }
