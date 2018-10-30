@@ -5,7 +5,9 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using IPioneerReceiverControl.Rx;
@@ -151,11 +153,11 @@ namespace PioneerReceiverControl.Rx
         {
             var commandDefinition = _commands.FirstOrDefault(c => c.CommandName == command.KeyValue.Key);
 
-            var receiverResponse = new ReceiverResponse();
-            
-            var observableSendResponse = Observable.Create<int>(async obs =>
+            var observableSendResponse = Observable.Create<ReceiverResponse>(obs =>
             {
-                var disposable = _listenerObservable
+                var receiverResponse = new ReceiverResponse();
+
+                var disposableListener = _listenerObservable
                     .Do(_ => Debug.WriteLine($"A Thread - Listen for Response Observe: {Thread.CurrentThread.ManagedThreadId}"))
                     .Timeout(timeout)
                     .Where(r => !(r?.Data is null))
@@ -175,7 +177,7 @@ namespace PioneerReceiverControl.Rx
                                 catch (Exception) { }
                                 finally
                                 {
-                                    obs.OnNext(1);
+                                    obs.OnNext(receiverResponse);
                                     obs.OnCompleted();
                                 }
                             }
@@ -185,38 +187,40 @@ namespace PioneerReceiverControl.Rx
                             if (ex is TimeoutException)
                             {
                                 receiverResponse.WaitingForResponseTimedOut = true;
-                                obs.OnNext(0);
+                                obs.OnNext(null);
                                 obs.OnCompleted();
                             }
                             else
                             {
-                                obs.OnNext(0);
+                                obs.OnNext(null);
                                 obs.OnCompleted();
                             }
                         },
                         () =>
                         {
-                            obs.OnNext(0);
+                            obs.OnNext(null);
                             obs.OnCompleted();
                         });
 
-                try
-                {
-                    await SendAsync(CreateRawCommand(command));
-                }
-                catch (Exception) { }
-                finally
-                {
-                    obs.OnNext(0);
-                    obs.OnCompleted();
-                }
+                var disposableSend = SendAsync(CreateRawCommand(command)).ToObservable()
+                    .Subscribe(
+                        _ =>
+                        {
+                            //obs.OnNext(null);
+                        },
+                        ex =>
+                        {
+                            obs.OnError(ex);
+                        },
+                        () =>
+                        {
+                            //obs.OnNext(0);
+                        });
 
-                return disposable;
+                return new CompositeDisposable(disposableListener, disposableSend);
             });
 
-            await observableSendResponse;
-
-            return receiverResponse;
+            return await observableSendResponse;
         }
 
 
